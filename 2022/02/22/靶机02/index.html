@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/%E5%BB%BA%E7%AD%91_building-four.svg">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dgpyone.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":true,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="靶机得简单攻略">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HACKADEMIC. 	RTB1">
+<meta property="og:url" content="https://dgpyone.github.io/2022/02/22/%E9%9D%B6%E6%9C%BA02/index.html">
+<meta property="og:site_name" content="不知名的角落">
+<meta property="og:description" content="靶机得简单攻略">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130022306198.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130022844551.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130023157151.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130023454513.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130023608039.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130023744046.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130024020296.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130031100871.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130032035785.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130042554573.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130054635407.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130054706696.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130063556078.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130064222464.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130063406301.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130064327447.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220130064458791.png">
+<meta property="article:published_time" content="2022-02-23T05:09:54.180Z">
+<meta property="article:modified_time" content="2022-02-23T07:36:09.154Z">
+<meta property="article:author" content="Ⱄⱄ...">
+<meta property="article:tag" content="END 文章已结束">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://dgpyone.github.io/images/image-20220130022306198.png">
+
+<link rel="canonical" href="https://dgpyone.github.io/2022/02/22/%E9%9D%B6%E6%9C%BA02/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>HACKADEMIC. 	RTB1 | 不知名的角落</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?8fc07f5ea379431863211c40c052a0ec";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">不知名的角落</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">在角落偷偷的努力</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-plus-square fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+      
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://dgpyone.github.io/2022/02/22/%E9%9D%B6%E6%9C%BA02/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/touxia.png">
+      <meta itemprop="name" content="Ⱄⱄ...">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="不知名的角落">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HACKADEMIC. 	RTB1
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%B6%E6%9C%BA/" itemprop="url" rel="index"><span itemprop="name">靶机</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+            <div class="post-description">靶机得简单攻略</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="HACKADEMIC-RTB1">HACKADEMIC: RTB1</h2>
+<p>靶机使用：VMware</p>
+<p>操作系统：Linux</p>
+<p>下载地址：<a target="_blank" rel="noopener" href="https://download.vulnhub.com/hackademic/Hackademic.RTB1.zip">https://download.vulnhub.com/hackademic/Hackademic.RTB1.zip</a></p>
+<p>完成界面：</p>
+<p><img src="/images/image-20220130022306198.png" alt="image-20220130022306198"></p>
+<h3 id="收集信息-2">收集信息</h3>
+<p>攻击IP：192.168.1.112</p>
+<p>确定目标IP：192.168.1.105</p>
+<p>扫描端口：</p>
+<p>nmap -T4 -O 192.168.1.105<img src="/images/image-20220130022844551.png" alt="image-20220130022844551"></p>
+<p>系统：Linux 2.6.22-2.6.36</p>
+<p>开放端口：22 ssh<br>
+80 http</p>
+<p>访问80端口</p>
+<p><img src="/images/image-20220130023157151.png" alt="image-20220130023157151"></p>
+<p>提示访问Key.txt<img src="/images/image-20220130023454513.png" alt="image-20220130023454513">发现了 Apache/2.2.15（Fedoras)</p>
+<p><img src="/images/image-20220130023608039.png" alt="image-20220130023608039"> 可以传参的地方。</p>
+<p><img src="/images/image-20220130023744046.png" alt="image-20220130023744046"></p>
+<p>尝试执行命令ls 发现报错，可能存在sql注入。完啦，忘了怎么弄。<img src="/images/image-20220130024020296.png" alt="image-20220130024020296"></p>
+<p>扫描目录吧</p>
+<p>dirb <a target="_blank" rel="noopener" href="http://192.168.1.105/Hackademic_RTB1/">http://192.168.1.105/Hackademic_RTB1/</a> /usr/share/wordlists/dirb/big.txt<img src="/images/image-20220130031100871.png" alt="image-20220130031100871"></p>
+<p><img src="/images/image-20220130032035785.png" alt="image-20220130032035785"> 其他目录没有任何价值。回头使用sqlmap获取shell</p>
+<p>sqlmap -u <a target="_blank" rel="noopener" href="http://192.168.1.105/Hackademic_RTB1/?cat=1">http://192.168.1.105/Hackademic_RTB1/?cat=1</a> --sql-shell</p>
+<p><img src="/images/image-20220130042554573.png" alt="image-20220130042554573"></p>
+<p>成功获取到shell。进行脱库<br>
+sqlmap -u <a target="_blank" rel="noopener" href="http://192.168.1.105/Hackademic_RTB1/?cat=1">http://192.168.1.105/Hackademic_RTB1/?cat=1</a> --dbs --batch --dump</p>
+<p><img src="/images/image-20220130054635407.png" alt="image-20220130054635407"></p>
+<p><img src="/images/image-20220130054706696.png" alt="image-20220130054706696"> 登录等级10得账户GeorgeMiller ， q1w2e3</p>
+<p><img src="/images/image-20220130063556078.png" alt="image-20220130063556078"> 发现了可以写入网页，写入反弹shell和一句话冰蝎。nc -lvp 443  监听该端口</p>
+<p>whoami发现权限为apache准备提权</p>
+<h3 id="提权-3">提权</h3>
+<p>连接冰蝎</p>
+<p><img src="/images/image-20220130064222464.png" alt="image-20220130064222464"> <img src="/images/image-20220130063406301.png" alt="image-20220130063406301"></p>
+<p>上传15285.c  chmod +x 15285.c 赋予写入权限，运行提权</p>
+<p><img src="/images/image-20220130064327447.png" alt="image-20220130064327447"></p>
+<p>打开keytxt。<img src="/images/image-20220130064458791.png" alt="image-20220130064458791"> 完成。</p>
+<h3 id="总结-10">总结</h3>
+<p>对sql命令不熟悉。不会使用sqlshell写入马。没法到适合得提权方法，提权过程中失败三次，因为文件没找对。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/END-%E6%96%87%E7%AB%A0%E5%B7%B2%E7%BB%93%E6%9D%9F/" rel="tag"># END 文章已结束</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/02/22/jangow01/" rel="prev" title="jangow01">
+      <i class="fa fa-chevron-left"></i> jangow01
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/22/DE-ICE%20S1.100/" rel="next" title="De-ICE_S1.100">
+      De-ICE_S1.100 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+<div>
+    
+    <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">------ 本文结束------</div>
+    
+</div>
+    
+ </div>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#HACKADEMIC-RTB1"><span class="nav-number">1.</span> <span class="nav-text">HACKADEMIC: RTB1</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%B6%E9%9B%86%E4%BF%A1%E6%81%AF-2"><span class="nav-number">1.1.</span> <span class="nav-text">收集信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%90%E6%9D%83-3"><span class="nav-number">1.2.</span> <span class="nav-text">提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-10"><span class="nav-number">1.3.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Ⱄⱄ..."
+      src="/images/touxia.png">
+  <p class="site-author-name" itemprop="name">Ⱄⱄ...</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:Gliscp@protonmail.com" title="E-Mail → mailto:Gliscp@protonmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Ⱄⱄ...</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+<script src="/js/bookmark.js"></script>
+
+
+  <script defer src="/lib/three/three.min.js"></script>
+    <script defer src="/lib/three/three-waves.min.js"></script>
+    <script defer src="/lib/three/canvas_lines.min.js"></script>
+    <script defer src="/lib/three/canvas_sphere.min.js"></script>
+
+
+  
+
+
+
+
+  
+<script src="//cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@4/dist/instantsearch.production.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

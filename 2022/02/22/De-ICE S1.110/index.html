@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/%E5%BB%BA%E7%AD%91_building-four.svg">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dgpyone.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":true,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="靶机得简单攻略">
+<meta property="og:type" content="article">
+<meta property="og:title" content="De-ICE_S1.110">
+<meta property="og:url" content="https://dgpyone.github.io/2022/02/22/De-ICE%20S1.110/index.html">
+<meta property="og:site_name" content="不知名的角落">
+<meta property="og:description" content="靶机得简单攻略">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209220744314.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209221056236.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209221446530.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209221741844.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209222043452.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209222123958.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209230051208.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220209230212109.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210000206403.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210000720810.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210000910326.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210001808397.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210002440727.png">
+<meta property="og:image" content="https://dgpyone.github.io/images/image-20220210010811369.png">
+<meta property="article:published_time" content="2022-02-23T05:09:54.207Z">
+<meta property="article:modified_time" content="2022-02-23T07:33:45.988Z">
+<meta property="article:author" content="Ⱄⱄ...">
+<meta property="article:tag" content="END 文章已结束">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://dgpyone.github.io/images/image-20220209220744314.png">
+
+<link rel="canonical" href="https://dgpyone.github.io/2022/02/22/De-ICE%20S1.110/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>De-ICE_S1.110 | 不知名的角落</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?8fc07f5ea379431863211c40c052a0ec";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">不知名的角落</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">在角落偷偷的努力</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-plus-square fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+      
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://dgpyone.github.io/2022/02/22/De-ICE%20S1.110/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/touxia.png">
+      <meta itemprop="name" content="Ⱄⱄ...">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="不知名的角落">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          De-ICE_S1.110
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%B6%E6%9C%BA/" itemprop="url" rel="index"><span itemprop="name">靶机</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+            <div class="post-description">靶机得简单攻略</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="信息介绍-2">信息介绍</h3>
+<p>下载地址：<a target="_blank" rel="noopener" href="https://noref.io/#http://hackingdojo.com/downloads/iso/De-ICE_S1.110.iso">https://noref.io/#http://hackingdojo.com/downloads/iso/De-ICE_S1.110.iso</a></p>
+<p>靶机IP：192.168.1.110</p>
+<p>攻击IP：192.168.1.128</p>
+<p>运行环境：VMware</p>
+<h3 id="信息收集-2">信息收集</h3>
+<p><code>nmap -sS 192.168.1.1/24</code><img src="/images/image-20220209220744314.png" alt="image-20220209220744314"></p>
+<p>确定目标IP地址为192.168.1.110，确定端口详细信息。</p>
+<p><code>nmap -A 192.168.1.110</code><img src="/images/image-20220209221056236.png" alt="image-20220209221056236"></p>
+<p>发现fcp可以匿名登录，目录下存在两个文件夹。/download和/incoming，在/download/etc中发现了shadow文件。<img src="/images/image-20220209221446530.png" alt="image-20220209221446530"></p>
+<h3 id="爆破密码">爆破密码</h3>
+<p>打开之后存在一个root账户和密码。使用john进行爆破。<img src="/images/image-20220209221741844.png" alt="image-20220209221741844"></p>
+<p><code>john --wordlist=rockyou-withcount.txt --rules 221.txt</code><img src="/images/image-20220209222043452.png" alt="image-20220209222043452"></p>
+<p>密码为toor，尝试ssh连接。<img src="/images/image-20220209222123958.png" alt="image-20220209222123958"></p>
+<p>一直被拒，拒绝的怀疑键盘输入有问题。只能重新在ftp内找有用文件。</p>
+<h5 id="1000-YEARS-LATER">1000 YEARS LATER</h5>
+<p>查看别人的攻略方法，发现在/download/etc中有个core文件。因为core文件是核心文件直接打开会显示乱码，所有一直没有关注过这个文件。</p>
+<p><code>核心文件是核心转储文件，通常在操作系统或者操作系统上运行的应用程序由于某种原因崩溃时创建的</code></p>
+<p><em>file core：ELF 32-bit LSB core file,Intel 80386,version 1(SYSV)</em></p>
+<p><em>括号内的内容指出是谁创建的转储文件。 核心文件是一个二进制文件，可以调试到文件中并读取它的内容。但要以文本格式查看，命令：strings core</em></p>
+<p><img src="/images/image-20220209230051208.png" alt="image-20220209230051208"></p>
+<p><img src="/images/image-20220209230212109.png" alt="image-20220209230212109"></p>
+<p>在core文件中出现包括root在内的四个用户。准备使用john爆破。</p>
+<p><code>john --wordlist=xx.txt --rules /221.txt</code><img src="/images/image-20220210000206403.png" alt="image-20220210000206403"></p>
+<p>爆破出root ：Complexity 、bbanter ：Zymurgy尝试登录，root用户没法登录只能去登录bbanter。<img src="/images/image-20220210000720810.png" alt="image-20220210000720810"></p>
+<p>用命令su root尝试登录root用户，成功。<img src="/images/image-20220210000910326.png" alt="image-20220210000910326"></p>
+<h3 id="寻找文件">寻找文件</h3>
+<p>靶机提示中描述需要找到加密敏感文件，并进行解密。搜索带有加密拓展名的文件（.enc）</p>
+<p><code>find / -name &quot;*.enc&quot; -mount</code><img src="/images/image-20220210001808397.png" alt="image-20220210001808397"></p>
+<p>打开相应目录，在里面还有一个copy.sh文件。查看一下是文件的加密方法。<img src="/images/image-20220210002440727.png" alt="image-20220210002440727"></p>
+<h3 id="加密解密过程">加密解密过程</h3>
+<p><code>#!/bin/sh 	#encrypt files in ftp/incoming(在ftp传入文件中加密文件) 	openssl enc -aes-256-cbc -salt -in /home/ftp/incoming/$1 -out 				/home/root/.save/$1.enc -pass file:/etc/ssl/certs/pw</code><br>
+<code>（使用openssl工具，用aes-256-cbc法加密，加密时加入杂质。加密的文件在/home/ftp/incoming/$1，加密完成后保存在/home/root/.save/$1.enc，密码存放在/etc/ssl/certs/pw）</code><br>
+<code>#remove old file（删除旧文件）</code><br>
+<code>rm /home/ftp/incoming/$1</code></p>
+<h5 id="解密文件方法为">解密文件方法为</h5>
+<p><code>openssl enc -d -aes-256-cbc -in customer_account.csv.enc -out customer_account.csv -pass file:/etc/ssl/certs/pw</code><img src="/images/image-20220210010811369.png" alt="image-20220210010811369"></p>
+<p>查看到文件内容。好几个人的信息。</p>
+<h3 id="总结-4">总结</h3>
+<p>字典要强大才能应对各种密码。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/END-%E6%96%87%E7%AB%A0%E5%B7%B2%E7%BB%93%E6%9D%9F/" rel="tag"># END 文章已结束</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/02/22/DE-ICE%20S1.100/" rel="prev" title="De-ICE_S1.100">
+      <i class="fa fa-chevron-left"></i> De-ICE_S1.100
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/22/DE-ICE%20S1.120/" rel="next" title="De-ICE_S1.120">
+      De-ICE_S1.120 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+<div>
+    
+    <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">------ 本文结束------</div>
+    
+</div>
+    
+ </div>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%A1%E6%81%AF%E4%BB%8B%E7%BB%8D-2"><span class="nav-number">1.</span> <span class="nav-text">信息介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86-2"><span class="nav-number">2.</span> <span class="nav-text">信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%88%86%E7%A0%B4%E5%AF%86%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text">爆破密码</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1000-YEARS-LATER"><span class="nav-number">3.0.1.</span> <span class="nav-text">1000 YEARS LATER</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E6%96%87%E4%BB%B6"><span class="nav-number">4.</span> <span class="nav-text">寻找文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A0%E5%AF%86%E8%A7%A3%E5%AF%86%E8%BF%87%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">加密解密过程</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%A7%A3%E5%AF%86%E6%96%87%E4%BB%B6%E6%96%B9%E6%B3%95%E4%B8%BA"><span class="nav-number">5.0.1.</span> <span class="nav-text">解密文件方法为</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-4"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Ⱄⱄ..."
+      src="/images/touxia.png">
+  <p class="site-author-name" itemprop="name">Ⱄⱄ...</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:Gliscp@protonmail.com" title="E-Mail → mailto:Gliscp@protonmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Ⱄⱄ...</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+<script src="/js/bookmark.js"></script>
+
+
+  <script defer src="/lib/three/three.min.js"></script>
+    <script defer src="/lib/three/three-waves.min.js"></script>
+    <script defer src="/lib/three/canvas_lines.min.js"></script>
+    <script defer src="/lib/three/canvas_sphere.min.js"></script>
+
+
+  
+
+
+
+
+  
+<script src="//cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@4/dist/instantsearch.production.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

